@@ -17,12 +17,12 @@ namespace ConsoleApp1
 {
     public class Program
     {
-        public static string BaseUriToScrape {  get; set; } = "https://www.abs.gov.au";
-        public static string FirstPageToScrape {  get; set; } = "/statistics/labour/employment-and-unemployment/labour-force-australia";
-        public static string FirstPageNode {  get; set; } = "//div[@id='block-views-block-topic-releases-listing-topic-latest-release-block']//a[@href]";
-        public static string FirstPageNodeAttribute {  get; set; } = "href";
+        public static string BaseUriToScrape { get; set; } = "https://www.abs.gov.au";
+        public static string FirstPageToScrape { get; set; } = "/statistics/labour/employment-and-unemployment/labour-force-australia";
+        public static string FirstPageNode { get; set; } = "//div[@id='block-views-block-topic-releases-listing-topic-latest-release-block']//a[@href]";
+        public static string FirstPageNodeAttribute { get; set; } = "href";
         public static string SecondPageNode { get; set; } = "//div[@class='file-description-link-formatter']//a[@href]";
-        public static string SecondPageNodeAttribute {  get; set; } = "href";
+        public static string SecondPageNodeAttribute { get; set; } = "href";
         public static string XlsxFileName { get; set; } = "data.xlsx";
         public static string Folder { get; set; } = "Downloads";
         public static string CsvFileName { get; set; } = "data.csv";
@@ -32,7 +32,6 @@ namespace ConsoleApp1
         {
             HtmlDocument pageDocument = htmlWeb.Load(BaseUriToScrape + pageToScrape);
             HtmlNodeCollection nodeCollection = pageDocument.DocumentNode.SelectNodes(nodeFilter);
-
             string uri = nodeCollection[0].GetAttributeValue(nodeAttribute, "");
             return uri;
         }
@@ -48,7 +47,6 @@ namespace ConsoleApp1
             httpClient.Dispose();
             stream.Dispose();
             fileStream.Dispose();
-
         }
 
         public static DataTable ReadXlsxFile(string filePath)
@@ -65,10 +63,13 @@ namespace ConsoleApp1
                 dataColumn.DataType = typeof(string);
                 dataTable.Columns.Add(dataColumn);
             }
+
             dataTable.PrimaryKey = new DataColumn[] { dataTable.Columns[0] };
+
             while (reader.Read())
             {
                 DataRow dataRow = dataTable.NewRow();
+
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     // Substitute "Null" at Excel top-left corner for primaryKey rule
@@ -81,30 +82,38 @@ namespace ConsoleApp1
                         var format = new NumberFormat(formatString);
                         dataRow[i] = format.Format(value, CultureInfo.InvariantCulture);
                     }
-                    
+
                 }
+
                 dataTable.Rows.Add(dataRow);
             }
+
             return dataTable;
         }
 
         public static DataTable RemoveRowsBefore(DataTable dataTable, string primaryKey)
         {
-            int primaryKeyIndex = dataTable.Rows.IndexOf(dataTable.Rows.Find(primaryKey) ?? dataTable.NewRow());
+            DataRow dataRow = dataTable.Rows.Find(primaryKey) ?? dataTable.NewRow();
+            int primaryKeyIndex = dataTable.Rows.IndexOf(dataRow);
             DataTable rowRemovedDataTable = dataTable;
+
             if (primaryKeyIndex != -1)
             {
+
                 for (int i = 0; i < primaryKeyIndex; i++)
                 {
                     rowRemovedDataTable.Rows.RemoveAt(0);
                 }
+
             }
+
             return rowRemovedDataTable;
         }
 
         public static DataTable TransposeDataTable(DataTable dataTable)
         {
             DataTable transposedDataTable = new DataTable();
+
             for (int i = 0; i < dataTable.Rows.Count; i++)
             {
                 DataColumn dataColumn = new DataColumn();
@@ -116,12 +125,13 @@ namespace ConsoleApp1
             for (int column = 0; column < dataTable.Columns.Count; column++)
             {
                 DataRow dataRow = transposedDataTable.NewRow();
+
                 for (int row = 0; row < dataTable.Rows.Count; row++)
                 {
                     dataRow[row] = dataTable.Rows[row][column];
                 }
-                transposedDataTable.Rows.Add(dataRow);
 
+                transposedDataTable.Rows.Add(dataRow);
             }
 
             return transposedDataTable;
@@ -130,15 +140,17 @@ namespace ConsoleApp1
         public static void SaveAsCsvFile(DataTable dataTable, string filePath)
         {
             StringBuilder stringBuilder = new StringBuilder();
+
             foreach (DataRow row in dataTable.Rows)
             {
                 IEnumerable<string> fields = row.ItemArray.Select(field => field.ToString());
                 stringBuilder.AppendLine(string.Join(",", fields));
             }
+
             File.WriteAllText(filePath, stringBuilder.ToString());
         }
 
-        public static async Task Main(string[] args)
+        public static async Task Main()
         {
             HtmlWeb htmlWeb = new HtmlWeb();
             string uri = CrawlWebpage(htmlWeb, FirstPageToScrape, FirstPageNode, FirstPageNodeAttribute);
@@ -149,8 +161,6 @@ namespace ConsoleApp1
             DataTable rowRemovedDataTable = RemoveRowsBefore(dataTable, PrimaryKey);
             DataTable transposedDataTable = TransposeDataTable(rowRemovedDataTable);
             SaveAsCsvFile(transposedDataTable, $"../../{Folder}/{CsvFileName}");
-
-            Console.ReadKey();
         }
     }
 }
