@@ -36,15 +36,13 @@ namespace ConsoleApp1
             return uri;
         }
 
-        public static async Task DownloadAndSaveFileAsync(string downloadUri, string directory, string fileName)
+        public static async Task DownloadAndSaveFileAsync(HttpClient client, string downloadUri)
         {
-            Directory.CreateDirectory($"../../{directory}/");
-            HttpClient httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Other");
-            Stream stream = await httpClient.GetStreamAsync(downloadUri);
-            FileStream fileStream = new FileStream($"../../{directory}/{fileName}", FileMode.Create);
+            Directory.CreateDirectory($"../../{Folder}/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Other");
+            FileStream fileStream = new FileStream($"../../{Folder}/{XlsxFileName}", FileMode.Create);
+            Stream stream = await client.GetStreamAsync(downloadUri);
             await stream.CopyToAsync(fileStream);
-            httpClient.Dispose();
             stream.Dispose();
             fileStream.Dispose();
         }
@@ -156,7 +154,8 @@ namespace ConsoleApp1
             string uri = CrawlWebpage(htmlWeb, FirstPageToScrape, FirstPageNode, FirstPageNodeAttribute);
             string downloadUri = CrawlWebpage(htmlWeb, uri, SecondPageNode, SecondPageNodeAttribute);
             string completeUri = BaseUriToScrape + downloadUri;
-            await DownloadAndSaveFileAsync(completeUri, Folder, XlsxFileName);
+            HttpClient client = new HttpClient();
+            await DownloadAndSaveFileAsync(client, completeUri);
             DataTable dataTable = ReadXlsxFile($"../../{Folder}/{XlsxFileName}");
             DataTable rowRemovedDataTable = RemoveRowsBefore(dataTable, PrimaryKey);
             DataTable transposedDataTable = TransposeDataTable(rowRemovedDataTable);
